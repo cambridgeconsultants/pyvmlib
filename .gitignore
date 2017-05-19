@@ -1,2 +1,6 @@
 pyvmlib/__pycache__
+build
+dist
+pyvmlib.egg-info/
+
 
