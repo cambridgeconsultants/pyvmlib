@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 """
 A simple library for controlling VMware vCenter / ESXi servers.
@@ -29,7 +29,8 @@ Details:
     Create a `Connection` object and call methods on it. e.g.
 
         with Connection(HOST, USER, PASS) as conn:
-            for dev in conn.list_usb_devices_on_guest(VM_NAME):
+            vm = conn.get_vm(VM_NAME)
+            for dev in conn.list_usb_devices_on_guest(vm):
                 print("Got dev: {}".format(dev))
 
     The wait_for_tasks function was written by Michael Rice, under the Apache
@@ -98,22 +99,31 @@ class Connection:
         self.log = logging.getLogger("vmlib.Connection")
 
     def __enter__(self):
-        """Connect to the vSphere vCenter."""
-        self.log.info("Connecting...")
-        kwargs = {
-            "host": self.host, "user": self.username, "pwd": self.password
-        }
-        if self.ignore_ssl_error:
-            # Disabling SSL certificate verification
-            context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
-            context.verify_mode = ssl.CERT_NONE
-            kwargs['sslContext'] = context
-        self.si = SmartConnect(**kwargs)
-        self.content = self.si.RetrieveContent()
-        self.log.info("...Connected")
+        """Special function for `with` syntax."""
+        self.connect()
         return self
 
     def __exit__(self, _ext_type, _exc_value, _traceback):
+        """Special function for `with` syntax."""
+        self.disconnect()
+
+    def connect(self):
+        """Connect to the vSphere vCenter."""
+        self.log.info("Connecting...")
+        if self.si is None:
+            kwargs = {
+                "host": self.host, "user": self.username, "pwd": self.password
+            }
+            if self.ignore_ssl_error:
+                # Disabling SSL certificate verification
+                context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
+                context.verify_mode = ssl.CERT_NONE
+                kwargs['sslContext'] = context
+            self.si = SmartConnect(**kwargs)
+            self.content = self.si.RetrieveContent()
+            self.log.info("...Connected")
+
+    def disconnect(self):
         """Disconnect from the vSphere vCenter."""
         if self.si is not None:
             Disconnect(self.si)
@@ -121,7 +131,12 @@ class Connection:
             self.content = None
 
     def get_role(self, role_name):
-        """Find a named role on the vCenter."""
+        """
+        Find a named role on the vCenter.
+
+        Arguments:
+        :param role_name: name of the role to get.
+        """
         obj = None
         am = self.content.authorizationManager
         for role in am.roleList:
@@ -131,40 +146,80 @@ class Connection:
         return obj
 
     def get_datacenter(self, dc_name):
-        """Find a named datacenter on the vCenter."""
+        """
+        Find a named datacenter on the vCenter.
+
+        Arguments:
+        :param dc_name: name of the datacenter to get.
+        """
         return _get_obj(self.content, [vim.Datacenter], dc_name)
 
-    def get_datastore(self, dc_name):
-        """Find a named datastore on the vCenter."""
-        return _get_obj(self.content, [vim.Datastore], dc_name)
+    def get_datastore(self, ds_name):
+        """
+        Find a named datastore on the vCenter.
+
+        Arguments:
+        :param ds_name: name of the datastore to get.
+        """
+        return _get_obj(self.content, [vim.Datastore], ds_name)
 
     def get_folder(self, folder_name):
-        """Find a named Folder on the vCenter."""
+        """
+        Find a named Folder on the vCenter.
+
+        Arguments:
+        :param folder_name: name of the folder to get.
+        """
         return _get_obj(self.content, [vim.Folder], folder_name)
 
     def get_host(self, host_name):
-        """Find a named Host on the vCenter."""
+        """
+        Find a named Host on the vCenter.
+
+        Arguments:
+        :param host_name: name of the host to get.
+        """
         return _get_obj(self.content, [vim.HostSystem], host_name)
 
     def get_cluster(self, cluster_name):
-        """Find a named Cluster on the vCenter."""
+        """
+        Find a named Cluster on the vCenter.
+
+        Arguments:
+        :param cluster_name: name of the cluster to get.
+        """
         return _get_obj(
             self.content, [vim.ClusterComputeResource], cluster_name)
 
     def get_compute_resource(self, compute_resource_name):
-        """Find a named Compute Resource on the vCenter."""
+        """
+        Find a named Compute Resource on the vCenter.
+
+        Arguments:
+        :param compute_resource_name: name of the compute resource to get.
+        """
         return _get_obj(
             self.content, [vim.ComputeResource], compute_resource_name)
 
     def get_vdswitch(self, vdswitch_name):
-        """Find a named VMware Distributed Switch on the vCenter."""
+        """
+        Find a named VMware Distributed Switch on the vCenter.
+
+        Arguments:
+        :param vdswitch_name: name of the switch to get.
+        """
         return _get_obj(
             self.content, [vim.VmwareDistributedVirtualSwitch], vdswitch_name)
 
     def get_pg(self, dc, pg_name):
-        """Find a named Port Group on the vCenter.
+        """
+        Find a named Port Group on the vCenter.
 
         Works on both standard Port Groups and Distributed Port Groups.
+
+        Arguments:
+        :param dc: the datacenter to look in (see `get_dc`)
+        :param pg_name: name of the distributed port group to get.
         """
         obj = None
         networks = dc.networkFolder.childEntity
@@ -175,11 +230,21 @@ class Connection:
         return obj
 
     def get_resourcepool(self, resourcepool_name):
-        """Find a named Resource Pool on the vCenter."""
+        """
+        Find a named Resource Pool on the vCenter.
+
+        Arguments:
+        :param resourcepool_name: name of the resource pool to get.
+        """
         return _get_obj(self.content, [vim.ResourcePool], resourcepool_name)
 
     def get_ip_addresses(self, vm):
-        """Get the IP addresses for a VM."""
+        """
+        Get the IP addresses for a VM.
+
+        Arguments:
+        :param vm: VM to get addresses for (see `get_vm`)
+        """
         addresses = []
         for nic in vm.guest.net:
             for addr in nic.ipAddress:
@@ -187,29 +252,60 @@ class Connection:
         return addresses
 
     def get_vm(self, vm_name):
-        """Find a named VM on the vCenter."""
+        """
+        Find a named VM or Template on the vCenter.
+
+        Note: Searches all folders.
+
+        Arguments:
+        :param vm_name: name of the VM to get.
+        """
         return _get_obj(self.content, [vim.VirtualMachine], vm_name)
 
     def delete_vm(self, vm):
-        """Delete a VM from the vCenter."""
+        """
+        Delete a VM from the vCenter.
+
+        Arguments:
+        :param vm: VM to delete (see `get_vm`)
+        """
         self.log.info("Deleting VM %s...", vm.name)
         self.wait_for_tasks([vm.Destroy_Task()])
 
     def power_off_vm(self, vm):
-        """Power Off a VM."""
+        """
+        Power Off a VM.
+
+        Arguments:
+        :param vm: VM to power off (see `get_vm`)
+        """
         if vm.runtime.powerState != "poweredOff":
             self.log.info("Powering off VM %s...", vm.name)
             self.wait_for_tasks([vm.PowerOff()])
 
     def power_on_vm(self, vm):
-        """Power On a VM."""
+        """
+        Power On a VM.
+
+        Arguments:
+        :param vm: VM to power on (see `get_vm`)
+        """
         if vm.runtime.powerState != "poweredOn":
             self.log.info("Powering on VM %s...", vm.name)
             self.wait_for_tasks([vm.PowerOn()])
 
-    def clone_template(self, dc, ds, host, folder, resource_pool, port_group,
-                       template, vm_name):
-        """Clone a template to a VM."""
+    def clone_template(self, ds, folder, resource_pool, template, vm_name):
+        """
+        Clone a template/VM to a VM.
+
+        Arguments:
+        :param ds: The datastore for the clone (see `get_datastore`)
+        :param folder: The folder for the clone (see `get_folder`)
+        :param resource_pool: The resource pool for the clone (see
+                `get_resourcepool`)
+        :param template: The VM Template to clone (see `get_vm`)
+        :param vm_name: The new name for the resulting VM
+        """
         self.log.info("Cloning %s to %s...", template.name, vm_name)
         relocate_spec = vim.vm.RelocateSpec()
         relocate_spec.datastore = ds
@@ -221,12 +317,62 @@ class Connection:
             [template.Clone(folder=folder, name=vm_name, spec=clone_spec)])
         return self.get_vm(vm_name)
 
+    def clone_vm_from_snapshot(self, ds, folder, resource_pool, source_vm,
+                               snapshot_name, vm_name):
+        """
+        Linked-clone a VM with a shapshot, to a VM.
+
+        Arguments:
+        :param ds: The datastore for the clone (see `get_datastore`)
+        :param folder: The folder for the clone (see `get_folder`)
+        :param resource_pool: The resource pool for the clone (see
+                `get_resourcepool`)
+        :param source_vm: The VM Template to clone (see `get_vm`)
+        :param vm_name: The new name for the resulting VM
+        """
+        self.log.info("Cloning %s to %s...", source_vm.name, vm_name)
+        for tree in source_vm.snapshot.rootSnapshotList:
+            if tree.name == snapshot_name:
+                snapshot_ref = tree.snapshot
+                break
+        else:
+            raise ValueError("VM %r does not have snapshot %r" % (
+                source_vm.name, snapshot_name))
+        relocate_spec = vim.vm.RelocateSpec()
+        relocate_spec.datastore = ds
+        relocate_spec.pool = resource_pool
+        relocate_spec.diskMoveType = "createNewChildDiskBacking"
+        clone_spec = vim.vm.CloneSpec()
+        clone_spec.location = relocate_spec
+        clone_spec.snapshot = snapshot_ref
+        clone_spec.powerOn = False
+        clone_spec.template = False
+        self.wait_for_tasks(
+            [source_vm.Clone(folder=folder, name=vm_name, spec=clone_spec)])
+        return self.get_vm(vm_name)
+
     def make_folder(self, dc, folder_name):
-        """Create a new Folder."""
+        """
+        Create a new Folder.
+
+        Arguments:
+        :param dc: the datacenter to create the folder in (see
+                `get_datacenter`)
+        :param folder_name: the name of the new folder
+        """
         dc.vmFolder.CreateFolder(folder_name)
 
-    def make_pg(self, vswitch, pg_name, vlan):
-        """Create a new Port Group on a vSwitch."""
+    def make_pg(self, vswitch, pg_name, vlan, uplink="lag1"):
+        """
+        Create a new Port Group on a vSwitch.
+
+        Arguments:
+        :param vswitch: the vSwitch on which to make the port group
+                (see `get_vdswitch`)
+        :param pg_name: the name for the new distributed port group
+        :param vlan: the VLAN ID for the new distributed port group
+        :param uplink: the name of the uplink to use
+        """
         spec = vim.DVPortgroupConfigSpec()
         spec.name = pg_name
         spec.numPorts = 32
@@ -237,7 +383,7 @@ class Connection:
         cfg.vlan.inherited = False
         policy = vim.VmwareUplinkPortTeamingPolicy()
         policy.uplinkPortOrder = vim.VMwareUplinkPortOrderPolicy()
-        policy.uplinkPortOrder.activeUplinkPort = ["lag1"]
+        policy.uplinkPortOrder.activeUplinkPort = [uplink]
         policy.uplinkPortOrder.standbyUplinkPort = []
         cfg.uplinkTeamingPolicy = policy
         cfg.securityPolicy = vim.DVSSecurityPolicy()
@@ -249,7 +395,13 @@ class Connection:
         self.wait_for_tasks([vswitch.AddDVPortgroup_Task([spec])])
 
     def make_resourcepool(self, cluster, resourcepool_name):
-        """Create a new Resource Pool on a cluster."""
+        """
+        Create a new Resource Pool on a cluster.
+
+        Arguments:
+        :param cluster: the cluster to use (see `get_cluster`)
+        :param resourcepool_name: the name for the new resource pool
+        """
         rp_spec = vim.ResourceConfigSpec()
         rp_spec.cpuAllocation = vim.ResourceAllocationInfo()
         rp_spec.cpuAllocation.limit = -1  # No limit
@@ -267,7 +419,14 @@ class Connection:
             name=resourcepool_name, spec=rp_spec)
 
     def configure_nic(self, vm, nic_key, pg):
-        """Configure a NIC on a VM."""
+        """
+        Configure a NIC on a VM.
+
+        Arguments:
+        :param vm: the VM to modify (see `get_vm`)
+        :param nic_key: the key for the NIC to modify
+        :param pg: the distributed port group to connect (see `get_pg`)
+        """
         self.log.info("Configuring NIC in %s...", vm.name)
         for device in vm.config.hardware.device:
             if isinstance(device, vim.vm.device.VirtualEthernetCard) and \
@@ -291,10 +450,13 @@ class Connection:
         raise ValueError("NIC key {} not found".format(nic_key))
 
     def wait_for_tasks(self, tasks):
-        """Wait for some tasks to complete.
+        """
+        Wait for some tasks to complete.
 
-        Given the service instance si and tasks, it returns after all the
-        tasks are complete
+        Given the service instance si and a list of tasks, it returns after
+        all the tasks are complete
+
+        :param tasks: a list of tasks, as returned from XXX_Task() methods.
         """
         self.log.debug("Waiting for tasks %r...", tasks)
         property_collector = self.content.propertyCollector
@@ -344,7 +506,13 @@ class Connection:
         self.log.debug("Waiting for tasks complete!")
 
     def set_entity_permission(self, entity, role, group):
-        """Set a role for a group on an entity."""
+        """
+        Set a role for a group on an entity.
+
+        :param entity: the entity (e.g. folder) this applies to
+        :param role: the role to grant
+        :param group: the group of people to give the role to
+        """
         permission = vim.AuthorizationManager.Permission()
         permission.principal = group
         permission.roleId = role.roleId
@@ -354,14 +522,24 @@ class Connection:
             entity=entity, permission=[permission])
 
     def list_usb_devices_on_host(self, compute_resource=None):
-        """Return list of USB devices on specific host."""
+        """
+        Return list of USB devices on specific host.
+
+        :param compute_resource: the compute resource to search,
+            or pass None to search the default (e.g. for single ESXi host)
+        """
         if compute_resource is None:
             compute_resource = self.get_compute_resource("")
         config = compute_resource.environmentBrowser.QueryConfigTarget()
         return config.usb
 
     def list_usb_devices_on_guest(self, vm):
-        """Return list of USB devices attached to a VM."""
+        """
+        Return list of USB devices attached to a VM.
+
+        :param vm: the vm to remove USB device from (see `get_vm`, or pass VM
+            name)
+        """
         if isinstance(vm, str):
             vm = self.get_vm(vm)
         return filter(
@@ -375,14 +553,20 @@ class Connection:
         Can remove a device by descriptor (see `insert_usb_device`) or by
         device key (see the `key` property of the devices returned by
         `list_usb_devices_on_guest`)
+
+        :param vm: the vm to remove USB device from (see `get_vm`, or pass VM
+            name)
+        :param descriptor: USB device descriptor string
         """
+        if isinstance(vm, str):
+            vm = self.get_vm(vm)
+
         key = None
         for dev in self.list_usb_devices_on_guest(vm):
             if dev.backing.deviceName == descriptor:
                 key = dev.key
                 break
-
-        if key is None:
+        else:
             raise ValueError("Descriptor not found in VM")
 
         cfg = vim.VirtualDeviceConfigSpec()
@@ -408,6 +592,10 @@ class Connection:
         controller 1. This string can be obtained from
         `Connection.list_usb_devices_on_host`, by inspecting the
         `physicalPath` property of the return devices.
+
+        :param vm: the vm to remove USB device from (see `get_vm`, or pass VM
+            name)
+        :param descriptor: USB device descriptor string
         """
         if isinstance(vm, str):
             vm = self.get_vm(vm)
