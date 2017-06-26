@@ -37,6 +37,36 @@ Details:
     2 licence (http://www.apache.org/licenses/LICENSE-2.0.html). See
     https://github.com/virtdevninja/pyvmomi-community-
     samples/blob/master/samples/tools/tasks.py
+
+    The list_vms function was based on https://github.com/vmware/pyvmomi-
+    community-samples/blob/master/samples/tools/pchelper.py
+
+    This in turn was based upon https://github.com/dnaeon/py-
+    vconnector/blob/master/src/vconnector/core.py, which contains:
+
+    # Copyright (c) 2013-2015 Marin Atanasov Nikolov <dnaeon@gmail.com>
+    # All rights reserved.
+    #
+    # Redistribution and use in source and binary forms, with or without
+    # modification, are permitted provided that the following conditions
+    # are met:
+    # 1. Redistributions of source code must retain the above copyright
+    #    notice, this list of conditions and the following disclaimer
+    #    in this position and unchanged.
+    # 2. Redistributions in binary form must reproduce the above copyright
+    #    notice, this list of conditions and the following disclaimer in the
+    #    documentation and/or other materials provided with the distribution.
+    #
+    # THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
+    # IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+    # OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+    # IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
+    # INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+    # NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+    # DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+    # THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+    # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+    # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 
@@ -505,19 +535,20 @@ class Connection:
                 pcfilter.Destroy()
         self.log.debug("Waiting for tasks complete!")
 
-    def set_entity_permission(self, entity, role, group):
+    def set_entity_permission(self, entity, role, principal, is_group=True):
         """
-        Set a role for a group on an entity.
+        Set a role for a principal on an entity.
 
         :param entity: the entity (e.g. folder) this applies to
         :param role: the role to grant
-        :param group: the group of people to give the role to
+        :param principal: the person / group of people to give the role to
+        :param is_group: pass True if principal is a group
         """
         permission = vim.AuthorizationManager.Permission()
-        permission.principal = group
+        permission.principal = principal
         permission.roleId = role.roleId
         permission.propagate = True
-        permission.group = True
+        permission.group = is_group
         self.content.authorizationManager.SetEntityPermissions(
             entity=entity, permission=[permission])
 
@@ -613,6 +644,67 @@ class Connection:
         spec = vim.VirtualMachineConfigSpec()
         spec.deviceChange = [cfg]
         self.wait_for_tasks([vm.ReconfigVM_Task(spec=spec)])
+
+    def list_vms(self, folder=None, properties=None):
+        """
+        List all the VMs in a folder.
+
+        This is much faster than getting a folder and iterating
+        the folder.childEntity list,.
+
+        Returns a list of dictionaries, where the keys are the given properties.
+
+        If properties is None, you just get name and the MOID.
+
+        Based on
+        https://github.com/vmware/pyvmomi-community-samples/blob/master/samples/tools/pchelper.py
+        """
+        view = self.get_container_view(vim.VirtualMachine, container=folder)
+        collector = self.si.content.propertyCollector
+
+        if properties is None:
+            properties = ["name"]
+
+        traversal_spec = vmodl.query.PropertyCollector.TraversalSpec()
+        traversal_spec.name = 'traverseEntities'
+        traversal_spec.path = 'view'
+        traversal_spec.skip = False
+        traversal_spec.type = view.__class__
+
+        obj_spec = vmodl.query.PropertyCollector.ObjectSpec()
+        obj_spec.obj = view
+        obj_spec.skip = True
+        obj_spec.selectSet = [traversal_spec]
+
+        property_spec = vmodl.query.PropertyCollector.PropertySpec()
+        property_spec.type = vim.VirtualMachine
+        property_spec.pathSet = properties
+
+        filter_spec = vmodl.query.PropertyCollector.FilterSpec()
+        filter_spec.objectSet = [obj_spec]
+        filter_spec.propSet = [property_spec]
+
+        props = collector.RetrieveContents([filter_spec])
+        data = []
+        for obj in props:
+            properties = {}
+            for prop in obj.propSet:
+                properties[str(prop.name)] = prop.val
+                properties['obj'] = obj.obj
+            data.append(properties)
+        return data
+
+    def get_container_view(self, object_type, container=None):
+        """
+        Get a container view for the given object type.
+
+        If container is None, we use the root folder.
+        """
+        if container is None:
+            container = self.content.rootFolder
+        view = self.content.viewManager.CreateContainerView(
+            container=container, type=[object_type], recursive=True)
+        return view
 
 
 def _get_obj(content, vimtype, name):
