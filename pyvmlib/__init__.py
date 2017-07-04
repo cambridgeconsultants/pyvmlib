@@ -784,6 +784,110 @@ class Connection:
                 "Got error %u from HTTP GET downloading %r" % (
                     r.status_code, path_in_vm))
 
+    def list_files_in_vm(
+            self, vm, vm_username, vm_password, path_in_vm,
+            index=None, max_results=None, match_pattern=None):
+        """
+        Get a directory listing from inside the VM.
+
+        Makes an SSL connection direct to the host, and so if your host has a
+        bad self-signed certificate, you need to create the initial connection
+        with `ignore_ssl_error=True`.
+
+        Requires a recent VMware Tools to be installed in the Guest VM. If you
+        get the error 'The guest operations agent is out of date.' then you
+        need to update VMware Tools.
+
+        :param vm: A VM to upload the file to (see `get_vm`). The VM must be
+            powered on.
+        :param vm_username: The username for the account in the VM to
+            authenticate against.
+        :param vm_password: The password for the account in the VM to
+            authenticate against.
+        :param path_in_vm: The path to the file in the VM.
+        :param index: Optional integer specifying start of directory listing.
+        :param max_results: Optional integer specify maxmimum number of entries
+            to return.
+        :param match_patter: Optional string specifying Perl-compatible
+            regular-expression to filter results.
+
+        The result is a vim.vm.guest.FileManager.ListFileInfo. The `files`
+        property on that is a list of `vim.vm.guest.FileManager.ListFileInfo`.
+        For example:
+
+        # noqa: E501
+
+            (vim.vm.guest.FileManager.ListFileInfo) {
+               dynamicType = <unset>,
+               dynamicProperty = (vmodl.DynamicProperty) [],
+               files = (vim.vm.guest.FileManager.FileInfo) [
+                  (vim.vm.guest.FileManager.FileInfo) {
+                     dynamicType = <unset>,
+                     dynamicProperty = (vmodl.DynamicProperty) [],
+                     path = '.',
+                     type = 'directory',
+                     size = 0L,
+                     attributes = (vim.vm.guest.FileManager.PosixFileAttributes) {
+                        dynamicType = <unset>,
+                        dynamicProperty = (vmodl.DynamicProperty) [],
+                        modificationTime = 2017-07-04T13:45:10Z,
+                        accessTime = 2017-07-04T13:59:56Z,
+                        symlinkTarget = '',
+                        ownerId = 0,
+                        groupId = 0,
+                        permissions = 17407L
+                     }
+                  },
+                  (vim.vm.guest.FileManager.FileInfo) {
+                     dynamicType = <unset>,
+                     dynamicProperty = (vmodl.DynamicProperty) [],
+                     path = '..',
+                     type = 'directory',
+                     size = 0L,
+                     attributes = (vim.vm.guest.FileManager.PosixFileAttributes) {
+                        dynamicType = <unset>,
+                        dynamicProperty = (vmodl.DynamicProperty) [],
+                        modificationTime = 2017-05-05T10:29:07Z,
+                        accessTime = 2017-06-14T16:05:46Z,
+                        symlinkTarget = '',
+                        ownerId = 0,
+                        groupId = 0,
+                        permissions = 16877L
+                     }
+                  },
+                  (vim.vm.guest.FileManager.FileInfo) {
+                     dynamicType = <unset>,
+                     dynamicProperty = (vmodl.DynamicProperty) [],
+                     path = 'test_file',
+                     type = 'file',
+                     size = 4194304L,
+                     attributes = (vim.vm.guest.FileManager.PosixFileAttributes) {
+                        dynamicType = <unset>,
+                        dynamicProperty = (vmodl.DynamicProperty) [],
+                        modificationTime = 2017-07-04T13:59:55Z,
+                        accessTime = 2017-07-04T13:59:55Z,
+                        symlinkTarget = '',
+                        ownerId = 1000,
+                        groupId = 1000,
+                        permissions = 33188L
+                     }
+                  },
+               ],
+               remaining = 0
+            }
+        """
+        creds = vim.vm.guest.NamePasswordAuthentication(
+            username=vm_username, password=vm_password)
+        fm = self.content.guestOperationsManager.fileManager
+        kwargs = {}
+        if index is not None:
+            kwargs['index'] = int(index)
+        if max_results is not None:
+            kwargs['maxResults'] = int(max_results)
+        if match_pattern is not None:
+            kwargs['matchPattern'] = str(match_pattern)
+        return fm.ListFilesInGuest(vm, creds, path_in_vm, **kwargs)
+
 
 def _get_obj(content, vimtype, name):
     """Return an object by name.
