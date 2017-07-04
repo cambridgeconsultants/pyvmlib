@@ -74,6 +74,7 @@ Details:
 # Standard Python imports
 ##############################################################################
 import logging
+import os
 import ssl
 
 ##############################################################################
@@ -81,6 +82,7 @@ import ssl
 ##############################################################################
 from pyVim.connect import SmartConnect, Disconnect
 from pyVmomi import vim, vmodl
+import requests
 
 ##############################################################################
 # Local imports
@@ -652,7 +654,8 @@ class Connection:
         This is much faster than getting a folder and iterating
         the folder.childEntity list,.
 
-        Returns a list of dictionaries, where the keys are the given properties.
+        Returns a list of dictionaries, where the keys are the given
+        properties.
 
         If properties is None, you just get name and the MOID.
 
@@ -705,6 +708,81 @@ class Connection:
         view = self.content.viewManager.CreateContainerView(
             container=container, type=[object_type], recursive=True)
         return view
+
+    def copy_file_to_vm(
+            self, vm, vm_username, vm_password, path_local, path_in_vm,
+            overwrite=True):
+        """
+        Copy a file from the local machine into the VM.
+
+        Makes an SSL connection direct to the host, and so if your host has a
+        bad self-signed certificate, you need to create the initial connection
+        with `ignore_ssl_error=True`.
+
+        Requires a recent VMware Tools to be installed in the Guest VM. If you
+        get the error 'The guest operations agent is out of date.' then you
+        need to update VMware Tools.
+
+        :param vm: A VM to upload the file to (see `get_vm`). The VM must be
+            powered on.
+        :param vm_username: The username for the account in the VM to
+            authenticate against.
+        :param vm_password: The password for the account in the VM to
+            authenticate against.
+        :param path_local: The path to the file on this machine.
+        :param path_in_vm: The path to the file in the VM.
+        :param overwrite: If True, this operation can over-write an existing
+            file. If False, it cannot.
+        """
+        creds = vim.vm.guest.NamePasswordAuthentication(
+            username=vm_username, password=vm_password)
+        file_attribute = vim.vm.guest.FileManager.FileAttributes()
+        with open(path_local, "rb") as f:
+            file_length = os.path.getsize(path_local)
+            fm = self.content.guestOperationsManager.fileManager
+            url = fm.InitiateFileTransferToGuest(
+                vm, creds, path_in_vm, file_attribute, file_length, overwrite)
+            url = url.replace("://*", "://" + self.host)
+            requests.put(url, data=f, verify=(not self.ignore_ssl_error))
+
+    def copy_file_from_vm(
+            self, vm, vm_username, vm_password, path_in_vm, path_local):
+        """
+        Copy a file from the a VM to the local machine.
+
+        Makes an SSL connection direct to the host, and so if your host has a
+        bad self-signed certificate, you need to create the initial connection
+        with `ignore_ssl_error=True`.
+
+        Requires a recent VMware Tools to be installed in the Guest VM. If you
+        get the error 'The guest operations agent is out of date.' then you
+        need to update VMware Tools.
+
+        :param vm: A VM to upload the file to (see `get_vm`). The VM must be
+            powered on.
+        :param vm_username: The username for the account in the VM to
+            authenticate against.
+        :param vm_password: The password for the account in the VM to
+            authenticate against.
+        :param path_in_vm: The path to the file in the VM.
+        :param path_local: The path to the file on this machine.
+        :param overwrite: If True, this operation can over-write an existing
+            file. If False, it cannot.
+        """
+        creds = vim.vm.guest.NamePasswordAuthentication(
+            username=vm_username, password=vm_password)
+        fm = self.content.guestOperationsManager.fileManager
+        fti = fm.InitiateFileTransferFromGuest(vm, creds, path_in_vm)
+        url = fti.url.replace("://*", "://" + self.host)
+        r = requests.get(url, verify=(not self.ignore_ssl_error))
+        if r.status_code == 200:
+            with open(path_local, "wb") as f:
+                for chunk in r:
+                    f.write(chunk)
+        else:
+            raise ValueError(
+                "Got error %u from HTTP GET downloading %r" % (
+                    r.status_code, path_in_vm))
 
 
 def _get_obj(content, vimtype, name):
