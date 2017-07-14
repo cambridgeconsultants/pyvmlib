@@ -766,8 +766,6 @@ class Connection:
             authenticate against.
         :param path_in_vm: The path to the file in the VM.
         :param path_local: The path to the file on this machine.
-        :param overwrite: If True, this operation can over-write an existing
-            file. If False, it cannot.
         """
         creds = vim.vm.guest.NamePasswordAuthentication(
             username=vm_username, password=vm_password)
@@ -887,6 +885,118 @@ class Connection:
         if match_pattern is not None:
             kwargs['matchPattern'] = str(match_pattern)
         return fm.ListFilesInGuest(vm, creds, path_in_vm, **kwargs)
+
+    def start_process_in_vm(
+            self, vm, vm_username, vm_password, command, arguments="",
+            working_dir=None):
+        """
+        Execute a command in the VM.
+
+        Makes an SSL connection direct to the host, and so if your host has a
+        bad self-signed certificate, you need to create the initial connection
+        with `ignore_ssl_error=True`.
+
+        Requires a recent VMware Tools to be installed in the Guest VM. If you
+        get the error 'The guest operations agent is out of date.' then you
+        need to update VMware Tools.
+
+        :param vm: A VM to upload the file to (see `get_vm`). The VM must be
+            powered on.
+        :param vm_username: The username for the account in the VM to
+            authenticate against.
+        :param vm_password: The password for the account in the VM to
+            authenticate against.
+        :param command: The path to the executable to execute in the VM.
+        :param arguments: The command line arguments (as a single string) to
+            pass to the executable.
+
+        Returns the PID of the new process.
+        """
+        creds = vim.vm.guest.NamePasswordAuthentication(
+            username=vm_username, password=vm_password)
+        pm = self.content.guestOperationsManager.processManager
+        spec = vim.vm.guest.ProcessManager.ProgramSpec()
+        spec.programPath = command
+        spec.arguments = arguments
+        if working_dir is not None:
+            spec.workingDirectory = working_dir
+        pid = pm.StartProgramInGuest(vm, creds, spec)
+        return pid
+
+    def list_processes_in_vm(
+            self, vm, vm_username, vm_password, pid_list=None):
+        """
+        List the processes running in a VM.
+
+        Makes an SSL connection direct to the host, and so if your host has a
+        bad self-signed certificate, you need to create the initial connection
+        with `ignore_ssl_error=True`.
+
+        Requires a recent VMware Tools to be installed in the Guest VM. If you
+        get the error 'The guest operations agent is out of date.' then you
+        need to update VMware Tools.
+
+        :param vm: A VM to upload the file to (see `get_vm`). The VM must be
+            powered on.
+        :param vm_username: The username for the account in the VM to
+            authenticate against.
+        :param vm_password: The password for the account in the VM to
+            authenticate against.
+        :param pid_list: An optional list of PIDs to query. If None, all PIDs
+            are returned.
+
+        Returns the a list of GuestProcessInfo objects.
+        """
+        creds = vim.vm.guest.NamePasswordAuthentication(
+            username=vm_username, password=vm_password)
+        pm = self.content.guestOperationsManager.processManager
+        args = [vm, creds]
+        if pid_list is not None:
+            args.append(pid_list)
+        result = pm.ListProcessesInGuest(*args)
+        return result
+
+    def revert_vm_to_snapshot(self, vm, snapshot):
+        """
+        Revert a VM to a previously taken snapshot.
+
+        :param vm: The VM to revert (see `get_vm`)
+        :param snapshot: The name of the snapshot to revert to as a
+            string, or a vim.vm.Snapshot object.
+        """
+        if isinstance(snapshot, str):
+            snapshot = self.find_snapshot(vm, snapshot)
+        self.wait_for_tasks([snapshot.RevertToSnapshot_Task()])
+
+    def find_snapshot(self, vm, snapshot_name):
+        """
+        Find the named snapshot for a VM.
+
+        Snapshots form a tree structure - they can have children and siblings.
+        We crawl the tree finding a match on the name.
+
+        :param vm: The VM to search (see `get_vm`)
+        :param snapshot_name: The name of the snapshot to find.
+
+        Returns a vim.vm.Snapshot object.
+        """
+        def walk_snapshot_list(snapshot_list, snapshot_name):
+            for node in snapshot_list:
+                if node.name == snapshot_name:
+                    return node.snapshot
+                elif node.childSnapshotList:
+                    child = walk_snapshot_list(
+                        node.childSnapshotList, snapshot_name)
+                    if child is not None:
+                        return child
+            return None
+
+        result = walk_snapshot_list(
+            vm.snapshot.rootSnapshotList, snapshot_name)
+        if result is None:
+            raise ValueError("Snapshot %r not found" % snapshot_name)
+        else:
+            return result
 
 
 def _get_obj(content, vimtype, name):
