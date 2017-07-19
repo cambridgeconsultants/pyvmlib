@@ -886,6 +886,68 @@ class Connection:
             kwargs['matchPattern'] = str(match_pattern)
         return fm.ListFilesInGuest(vm, creds, path_in_vm, **kwargs)
 
+    def make_directory_in_vm(
+            self, vm, vm_username, vm_password, directory_name,
+            create_parents=True):
+        """
+        Create a directory in the VM.
+
+        :param vm: A VM to create the directory in (see `get_vm`). The VM must
+            be powered on.
+        :param vm_username: The username for the account in the VM to
+            authenticate against.
+        :param vm_password: The password for the account in the VM to
+            authenticate against.
+        :param directory_name: The full path of the directory to create
+        :param create_parents: If True, any intermediate directories that
+            do not exist will be created. If False, they will not and must
+            exist already.
+        """
+        creds = vim.vm.guest.NamePasswordAuthentication(
+            username=vm_username, password=vm_password)
+        fm = self.content.guestOperationsManager.fileManager
+        return fm.MakeDirectoryInGuest(
+            vm, creds, directory_name, create_parents)
+
+    def delete_file_in_vm(
+            self, vm, vm_username, vm_password, file_path):
+        """
+        Delete a file in the VM.
+
+        :param vm: A VM to delete the file in (see `get_vm`). The VM must be
+            powered on.
+        :param vm_username: The username for the account in the VM to
+            authenticate against.
+        :param vm_password: The password for the account in the VM to
+            authenticate against.
+        :param file_path: The full path of the file to delete.
+        """
+        creds = vim.vm.guest.NamePasswordAuthentication(
+            username=vm_username, password=vm_password)
+        fm = self.content.guestOperationsManager.fileManager
+        return fm.DeleteFileInGuest(vm, creds, file_path)
+
+    def delete_directory_in_vm(
+            self, vm, vm_username, vm_password, directory_name,
+            recursive=True):
+        """
+        Delete a directory in the VM and optionally all its contents.
+
+        :param vm: A VM to delete the directory in (see `get_vm`). The VM must
+            be powered on.
+        :param vm_username: The username for the account in the VM to
+            authenticate against.
+        :param vm_password: The password for the account in the VM to
+            authenticate against.
+        :param directory_name: The full path of the directory to delete.
+        :param recursive: If True, the content of the directory will also be
+            deleted. If False, the directory must be empty.
+        """
+        creds = vim.vm.guest.NamePasswordAuthentication(
+            username=vm_username, password=vm_password)
+        fm = self.content.guestOperationsManager.fileManager
+        return fm.DeleteDirectoryInGuest(vm, creds, directory_name, recursive)
+
     def start_process_in_vm(
             self, vm, vm_username, vm_password, command, arguments="",
             working_dir=None):
