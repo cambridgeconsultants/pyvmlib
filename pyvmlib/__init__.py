@@ -950,7 +950,7 @@ class Connection:
 
     def start_process_in_vm(
             self, vm, vm_username, vm_password, command, arguments="",
-            working_dir=None):
+            working_dir=None, interactive=False):
         """
         Execute a command in the VM.
 
@@ -976,6 +976,8 @@ class Connection:
         """
         creds = vim.vm.guest.NamePasswordAuthentication(
             username=vm_username, password=vm_password)
+        if interactive:
+            creds.interactiveSession = True
         pm = self.content.guestOperationsManager.processManager
         spec = vim.vm.guest.ProcessManager.ProgramSpec()
         spec.programPath = command
