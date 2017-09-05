@@ -83,6 +83,7 @@ import ssl
 from pyVim.connect import SmartConnect, Disconnect
 from pyVmomi import vim, vmodl
 import requests
+from six import raise_from
 
 ##############################################################################
 # Local imports
@@ -97,6 +98,34 @@ DEFAULT_NUM_PORTS = 64
 ##############################################################################
 # Code and classes
 ##############################################################################
+
+
+class VmNotFound(Exception):
+    """Raised if you call 'get_vm' with a VM name that can't be found."""
+
+    def __init__(self, vm_name):
+        """
+        Create new VmNotFound Exception.
+
+        :param vm_name: Name of VM that couldn't be found.
+        """
+        self.vm_name = vm_name
+
+    def __str__(self):
+        """Convert to string."""
+        return "Cannot find VM {!r}".format(self.vm_name)
+
+
+class ConnectException(Exception):
+    """Superclass of all connection-related Exceptions."""
+
+
+class InvalidCredentialsException(ConnectException):
+    """Raised if your username or password is incorrect."""
+
+
+class HostConnectException(ConnectException):
+    """Raised if we could not connect to the host."""
 
 
 class Connection:
@@ -151,7 +180,15 @@ class Connection:
                 context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
                 context.verify_mode = ssl.CERT_NONE
                 kwargs['sslContext'] = context
-            self.si = SmartConnect(**kwargs)
+            try:
+                self.si = SmartConnect(**kwargs)
+            except vim.fault.InvalidLogin:
+                # Squash the libary error - it isn't helpful
+                InvalidCredentialsException()
+            except (IOError, ) as e:
+                # The underlying error may be useful, but give them
+                # one of our errors first.
+                raise_from(HostConnectException(str(e)), e)
             self.content = self.si.RetrieveContent()
             self.log.info("...Connected")
 
@@ -283,7 +320,7 @@ class Connection:
                 addresses.append(addr)
         return addresses
 
-    def get_vm(self, vm_name):
+    def get_vm(self, vm_name, required=False):
         """
         Find a named VM or Template on the vCenter.
 
@@ -292,7 +329,10 @@ class Connection:
         Arguments:
         :param vm_name: name of the VM to get.
         """
-        return _get_obj(self.content, [vim.VirtualMachine], vm_name)
+        vm = _get_obj(self.content, [vim.VirtualMachine], vm_name)
+        if required and vm is None:
+            raise VmNotFound(vm_name)
+        return vm
 
     def delete_vm(self, vm):
         """
