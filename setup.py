@@ -3,7 +3,7 @@
 from setuptools import setup
 
 setup(name='pyvmlib',
-      version='1.3.0',
+      version='2.0.0',
       description='A simple library for controlling VMware vSphere servers.',
       url='http://github.com/cambridgeconsultants/pyvmlib',
       author='Cambridge Consultants',

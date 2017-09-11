@@ -100,12 +100,16 @@ DEFAULT_NUM_PORTS = 64
 ##############################################################################
 
 
-class VmNotFound(Exception):
+class PyVmlibException(Exception):
+    """Superclass of all exceptions raised by pyvmlib."""
+
+
+class VmNotFoundException(PyVmlibException):
     """Raised if you call 'get_vm' with a VM name that can't be found."""
 
     def __init__(self, vm_name):
         """
-        Create new VmNotFound Exception.
+        Create new VmNotFoundException.
 
         :param vm_name: Name of VM that couldn't be found.
         """
@@ -116,7 +120,7 @@ class VmNotFound(Exception):
         return "Cannot find VM {!r}".format(self.vm_name)
 
 
-class ConnectException(Exception):
+class ConnectException(PyVmlibException):
     """Superclass of all connection-related Exceptions."""
 
 
@@ -183,12 +187,16 @@ class Connection:
             try:
                 self.si = SmartConnect(**kwargs)
             except vim.fault.InvalidLogin:
-                # Squash the libary error - it isn't helpful
-                InvalidCredentialsException()
+                # Squash the library error - it isn't helpful
+                msg = "Unable to log in as user {user!r} on host " \
+                    "{host!r}".format(user=self.username, host=self.host)
+                raise_from(InvalidCredentialsException(msg), None)
             except (IOError, ) as e:
                 # The underlying error may be useful, but give them
                 # one of our errors first.
-                raise_from(HostConnectException(str(e)), e)
+                msg = "Cannot connect to {host!r} ({exc})".format(
+                    host=self.host, exc=e)
+                raise_from(HostConnectException(msg), e)
             self.content = self.si.RetrieveContent()
             self.log.info("...Connected")
 
@@ -331,7 +339,7 @@ class Connection:
         """
         vm = _get_obj(self.content, [vim.VirtualMachine], vm_name)
         if required and vm is None:
-            raise VmNotFound(vm_name)
+            raise VmNotFoundException(vm_name)
         return vm
 
     def delete_vm(self, vm):
