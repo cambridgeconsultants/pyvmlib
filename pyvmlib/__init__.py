@@ -154,7 +154,8 @@ class Connection:
 
     # noqa: E501
 
-    >>> with Connection("test.example.com", "user", "password") as c:
+
+    >>> with Connection("test.example.com", "user", "password") as c: # doctest: +IGNORE_EXCEPTION_DETAIL
     ...     pass
     Traceback (most recent call last):
     ...
