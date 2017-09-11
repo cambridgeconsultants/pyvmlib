@@ -151,6 +151,14 @@ class Connection:
     :param ignore_ssl_error: If True, ignore any SSL errors (e.g because your
         server has a self-signed cert)
     :type ignore_ssl_error: Boolean
+
+    # noqa: E501
+
+    >>> with Connection("test.example.com", "user", "password") as c:
+    ...     pass
+    Traceback (most recent call last):
+    ...
+    pyvmlib.HostConnectException: Cannot connect to 'test.example.com' ([Errno -2] Name or service not known)
     """
 
     def __init__(self, host, username, password, ignore_ssl_error=False):
