@@ -796,11 +796,13 @@ class Connection:
         file_attribute = vim.vm.guest.FileManager.FileAttributes()
         with open(path_local, "rb") as f:
             file_length = os.path.getsize(path_local)
+            self.log.info("Uploading %r (%u bytes)...", path_local, file_length)
             fm = self.content.guestOperationsManager.fileManager
             url = fm.InitiateFileTransferToGuest(
                 vm, creds, path_in_vm, file_attribute, file_length, overwrite)
             url = url.replace("://*", "://" + self.host)
-            requests.put(url, data=f, verify=(not self.ignore_ssl_error))
+            r = requests.put(url, data=f, verify=(not self.ignore_ssl_error))
+            r.raise_for_status()
 
     def copy_file_from_vm(
             self, vm, vm_username, vm_password, path_in_vm, path_local):
@@ -830,14 +832,12 @@ class Connection:
         fti = fm.InitiateFileTransferFromGuest(vm, creds, path_in_vm)
         url = fti.url.replace("://*", "://" + self.host)
         r = requests.get(url, verify=(not self.ignore_ssl_error))
-        if r.status_code == 200:
+        if r.status_code == requests.codes.ok:
             with open(path_local, "wb") as f:
                 for chunk in r:
                     f.write(chunk)
         else:
-            raise ValueError(
-                "Got error %u from HTTP GET downloading %r" % (
-                    r.status_code, path_in_vm))
+            raise r.raise_for_status()
 
     def list_files_in_vm(
             self, vm, vm_username, vm_password, path_in_vm,
