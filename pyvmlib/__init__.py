@@ -1028,6 +1028,10 @@ class Connection:
         :param command: The path to the executable to execute in the VM.
         :param arguments: The command line arguments (as a single string) to
             pass to the executable.
+        :param working_dir: (Optional) path to the working directory on the
+            VM in which the command should be executed.
+        :param interactive: (Optional.) Whether an interactive session on the
+            VM is required.
 
         Returns the PID of the new process.
         """
@@ -1045,7 +1049,8 @@ class Connection:
         return pid
 
     def list_processes_in_vm(
-            self, vm, vm_username, vm_password, pid_list=None):
+            self, vm, vm_username, vm_password, pid_list=None,
+            interactive=False):
         """
         List the processes running in a VM.
 
@@ -1065,11 +1070,15 @@ class Connection:
             authenticate against.
         :param pid_list: An optional list of PIDs to query. If None, all PIDs
             are returned.
+        :param interactive: (Optional.) Whether an interactive session has
+            been used. See `start_process_in_vm`.
 
         Returns the a list of GuestProcessInfo objects.
         """
         creds = vim.vm.guest.NamePasswordAuthentication(
             username=vm_username, password=vm_password)
+        if interactive:
+            creds.interactiveSession = True
         pm = self.content.guestOperationsManager.processManager
         args = [vm, creds]
         if pid_list is not None:
