@@ -183,7 +183,7 @@ class Connection:
 
     def connect(self):
         """Connect to the vSphere vCenter."""
-        self.log.info("Connecting...")
+        self.log.debug("Connecting...")
         if self.si is None:
             kwargs = {
                 "host": self.host, "user": self.username, "pwd": self.password
@@ -207,7 +207,7 @@ class Connection:
                     host=self.host, exc=e)
                 raise_from(HostConnectException(msg), e)
             self.content = self.si.RetrieveContent()
-            self.log.info("...Connected")
+            self.log.debug("...Connected")
 
     def disconnect(self):
         """Disconnect from the vSphere vCenter."""
@@ -238,7 +238,7 @@ class Connection:
         Arguments:
         :param dc_name: name of the datacenter to get.
         """
-        return _get_obj(self.content, [vim.Datacenter], dc_name)
+        return self._get_obj(vim.Datacenter, dc_name)
 
     def get_datastore(self, ds_name):
         """
@@ -247,7 +247,7 @@ class Connection:
         Arguments:
         :param ds_name: name of the datastore to get.
         """
-        return _get_obj(self.content, [vim.Datastore], ds_name)
+        return self._get_obj(vim.Datastore, ds_name)
 
     def get_folder(self, folder_name):
         """
@@ -256,7 +256,7 @@ class Connection:
         Arguments:
         :param folder_name: name of the folder to get.
         """
-        return _get_obj(self.content, [vim.Folder], folder_name)
+        return self._get_obj(vim.Folder, folder_name)
 
     def get_host(self, host_name):
         """
@@ -265,7 +265,7 @@ class Connection:
         Arguments:
         :param host_name: name of the host to get.
         """
-        return _get_obj(self.content, [vim.HostSystem], host_name)
+        return self._get_obj(vim.HostSystem, host_name)
 
     def get_cluster(self, cluster_name):
         """
@@ -274,8 +274,7 @@ class Connection:
         Arguments:
         :param cluster_name: name of the cluster to get.
         """
-        return _get_obj(
-            self.content, [vim.ClusterComputeResource], cluster_name)
+        return self._get_obj(vim.ClusterComputeResource, cluster_name)
 
     def get_compute_resource(self, compute_resource_name):
         """
@@ -284,8 +283,7 @@ class Connection:
         Arguments:
         :param compute_resource_name: name of the compute resource to get.
         """
-        return _get_obj(
-            self.content, [vim.ComputeResource], compute_resource_name)
+        return self._get_obj(vim.ComputeResource, compute_resource_name)
 
     def get_vdswitch(self, vdswitch_name):
         """
@@ -294,8 +292,7 @@ class Connection:
         Arguments:
         :param vdswitch_name: name of the switch to get.
         """
-        return _get_obj(
-            self.content, [vim.VmwareDistributedVirtualSwitch], vdswitch_name)
+        return self._get_obj(vim.VmwareDistributedVirtualSwitch, vdswitch_name)
 
     def get_pg(self, dc, pg_name):
         """
@@ -322,7 +319,7 @@ class Connection:
         Arguments:
         :param resourcepool_name: name of the resource pool to get.
         """
-        return _get_obj(self.content, [vim.ResourcePool], resourcepool_name)
+        return self._get_obj(vim.ResourcePool, resourcepool_name)
 
     def get_ip_addresses(self, vm):
         """
@@ -331,13 +328,15 @@ class Connection:
         Arguments:
         :param vm: VM to get addresses for (see `get_vm`)
         """
+        if isinstance(vm, str) or isinstance(vm, unicode):
+            vm = self.get_vm(vm)
         addresses = []
         for nic in vm.guest.net:
             for addr in nic.ipAddress:
                 addresses.append(addr)
         return addresses
 
-    def get_vm(self, vm_name, required=False):
+    def get_vm(self, vm_name, required=False, folder=None):
         """
         Find a named VM or Template on the vCenter.
 
@@ -345,8 +344,17 @@ class Connection:
 
         Arguments:
         :param vm_name: name of the VM to get.
+        :param required: If True, an exception is raised if the VM is not
+            found. If False, None is returned if the VM is not found.
+        :param folder: This is the string name of a Folder or a vim.Folder
+            object (which limits the search to that folder), or None (which
+            means search everything). Searching within a specific folder is
+            faster.
         """
-        vm = _get_obj(self.content, [vim.VirtualMachine], vm_name)
+        if folder:
+            if isinstance(folder, str) or isinstance(folder, unicode):
+                folder = self.get_folder(folder)
+        vm = self._get_obj(vim.VirtualMachine, vm_name, folder)
         if required and vm is None:
             raise VmNotFoundException(vm_name)
         return vm
@@ -404,7 +412,7 @@ class Connection:
         clone_spec.powerOn = False
         self.wait_for_tasks(
             [template.Clone(folder=folder, name=vm_name, spec=clone_spec)])
-        return self.get_vm(vm_name)
+        return self.get_vm(vm_name, folder=folder, required=True)
 
     def clone_vm_from_snapshot(self, ds, folder, resource_pool, source_vm,
                                snapshot_name, vm_name):
@@ -438,7 +446,7 @@ class Connection:
         clone_spec.template = False
         self.wait_for_tasks(
             [source_vm.Clone(folder=folder, name=vm_name, spec=clone_spec)])
-        return self.get_vm(vm_name)
+        return self.get_vm(vm_name, folder=folder, required=True)
 
     def make_folder(self, dc, folder_name):
         """
@@ -630,7 +638,7 @@ class Connection:
         :param vm: the vm to remove USB device from (see `get_vm`, or pass VM
             name)
         """
-        if isinstance(vm, str):
+        if isinstance(vm, str) or isinstance(vm, unicode):
             vm = self.get_vm(vm)
         return filter(
             lambda x: isinstance(
@@ -648,7 +656,7 @@ class Connection:
             name)
         :param descriptor: USB device descriptor string
         """
-        if isinstance(vm, str):
+        if isinstance(vm, str) or isinstance(vm, unicode):
             vm = self.get_vm(vm)
 
         key = None
@@ -687,7 +695,7 @@ class Connection:
             name)
         :param descriptor: USB device descriptor string
         """
-        if isinstance(vm, str):
+        if isinstance(vm, str) or isinstance(vm, unicode):
             vm = self.get_vm(vm)
         cfg = vim.VirtualDeviceConfigSpec()
         cfg.operation = vim.VirtualDeviceConfigSpecOperation.add
@@ -791,12 +799,15 @@ class Connection:
         :param overwrite: If True, this operation can over-write an existing
             file. If False, it cannot.
         """
+        if isinstance(vm, str) or isinstance(vm, unicode):
+            vm = self.get_vm(vm)
         creds = vim.vm.guest.NamePasswordAuthentication(
             username=vm_username, password=vm_password)
         file_attribute = vim.vm.guest.FileManager.FileAttributes()
         with open(path_local, "rb") as f:
             file_length = os.path.getsize(path_local)
-            self.log.info("Uploading %r (%u bytes)...", path_local, file_length)
+            self.log.info("Uploading %r (%u bytes)...",
+                          path_local, file_length)
             fm = self.content.guestOperationsManager.fileManager
             url = fm.InitiateFileTransferToGuest(
                 vm, creds, path_in_vm, file_attribute, file_length, overwrite)
@@ -826,6 +837,8 @@ class Connection:
         :param path_in_vm: The path to the file in the VM.
         :param path_local: The path to the file on this machine.
         """
+        if isinstance(vm, str) or isinstance(vm, unicode):
+            vm = self.get_vm(vm)
         creds = vim.vm.guest.NamePasswordAuthentication(
             username=vm_username, password=vm_password)
         fm = self.content.guestOperationsManager.fileManager
@@ -931,6 +944,8 @@ class Connection:
                remaining = 0
             }
         """
+        if isinstance(vm, str) or isinstance(vm, unicode):
+            vm = self.get_vm(vm)
         creds = vim.vm.guest.NamePasswordAuthentication(
             username=vm_username, password=vm_password)
         fm = self.content.guestOperationsManager.fileManager
@@ -960,6 +975,8 @@ class Connection:
             do not exist will be created. If False, they will not and must
             exist already.
         """
+        if isinstance(vm, str) or isinstance(vm, unicode):
+            vm = self.get_vm(vm)
         creds = vim.vm.guest.NamePasswordAuthentication(
             username=vm_username, password=vm_password)
         fm = self.content.guestOperationsManager.fileManager
@@ -1000,6 +1017,8 @@ class Connection:
         :param recursive: If True, the content of the directory will also be
             deleted. If False, the directory must be empty.
         """
+        if isinstance(vm, str) or isinstance(vm, unicode):
+            vm = self.get_vm(vm)
         creds = vim.vm.guest.NamePasswordAuthentication(
             username=vm_username, password=vm_password)
         fm = self.content.guestOperationsManager.fileManager
@@ -1035,6 +1054,8 @@ class Connection:
 
         Returns the PID of the new process.
         """
+        if isinstance(vm, str) or isinstance(vm, unicode):
+            vm = self.get_vm(vm)
         creds = vim.vm.guest.NamePasswordAuthentication(
             username=vm_username, password=vm_password)
         if interactive:
@@ -1075,6 +1096,8 @@ class Connection:
 
         Returns the a list of GuestProcessInfo objects.
         """
+        if isinstance(vm, str) or isinstance(vm, unicode):
+            vm = self.get_vm(vm)
         creds = vim.vm.guest.NamePasswordAuthentication(
             username=vm_username, password=vm_password)
         if interactive:
@@ -1094,7 +1117,7 @@ class Connection:
         :param snapshot: The name of the snapshot to revert to as a
             string, or a vim.vm.Snapshot object.
         """
-        if isinstance(snapshot, str):
+        if isinstance(snapshot, str) or isinstance(snapshot, unicode):
             snapshot = self.find_snapshot(vm, snapshot)
         self.wait_for_tasks([snapshot.RevertToSnapshot_Task()])
 
@@ -1121,6 +1144,8 @@ class Connection:
                         return child
             return None
 
+        if isinstance(vm, str) or isinstance(vm, unicode):
+            vm = self.get_vm(vm)
         result = walk_snapshot_list(
             vm.snapshot.rootSnapshotList, snapshot_name)
         if result is None:
@@ -1128,27 +1153,25 @@ class Connection:
         else:
             return result
 
+    def _get_obj(self, vimtype, name, folder=None):
+        """Return an object by name.
 
-def _get_obj(content, vimtype, name):
-    """Return an object by name.
+        If name is None the first found object is returned.
 
-    If name is None the first found object is returned.
-
-    From https://github.com/vmware/pyvmomi-community-samples.
-    """
-    obj = None
-    container = content.viewManager.CreateContainerView(
-        content.rootFolder, vimtype, True)
-    for c in container.view:
-        if name:
-            if c.name == name:
+        From https://github.com/vmware/pyvmomi-community-samples.
+        """
+        obj = None
+        container = self.get_container_view(vimtype, folder)
+        for c in container.view:
+            if name:
+                if c.name == name:
+                    obj = c
+                    break
+            else:
                 obj = c
                 break
-        else:
-            obj = c
-            break
-    container.Destroy()
-    return obj
+        container.Destroy()
+        return obj
 
 ##############################################################################
 # End of file
