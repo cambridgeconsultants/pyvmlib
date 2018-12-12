@@ -358,7 +358,7 @@ class Connection:
             vm = self.si.content.searchIndex.FindChild(folder, vm_name)
         else:
             # Search the whole tree
-            vm = self._get_obj(vim.VirtualMachine, vm_name, folder)
+            vm = self._get_obj(vim.VirtualMachine, vm_name)
             if required and vm is None:
                 raise VmNotFoundException(vm_name)
         return vm
