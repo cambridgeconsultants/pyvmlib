@@ -349,14 +349,40 @@ class Connection:
         :param folder: This is the string name of a Folder or a vim.Folder
             object (which limits the search to that folder), or None (which
             means search everything). Searching within a specific folder is
-            faster.
+            much faster.
         """
         if folder:
             if isinstance(folder, str) or isinstance(folder, unicode):
                 folder = self.get_folder(folder)
-        vm = self._get_obj(vim.VirtualMachine, vm_name, folder)
+            # Search this specific folder (without recursing deeper)
+            vm = self.si.content.searchIndex.FindChild(folder, vm_name)
+        else:
+            # Search the whole tree
+            vm = self._get_obj(vim.VirtualMachine, vm_name, folder)
+            if required and vm is None:
+                raise VmNotFoundException(vm_name)
+        return vm
+
+    def get_vm_by_instance_uuid(self, instance_uuid, required=False):
+        """
+        Find a VM by its `vm.summary.config.instanceUuid` property.
+
+        This is much faster than finding a VM by name.
+
+        Arguments:
+        :param instance_uuid: A string in the form
+            'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx' previously taken from
+            `vm.summary.config.instanceUuid` for a given VM.
+        :param required: If True, an exception is raised if the VM is not
+            found. If False, None is returned if the VM is not found.
+        """
+        datacenter = None
+        vm_search = True
+        find_instance_uuid = True
+        vm = self.si.content.searchIndex.FindByUuid(
+            datacenter, instance_uuid, vm_search, find_instance_uuid)
         if required and vm is None:
-            raise VmNotFoundException(vm_name)
+            raise VmNotFoundException(instance_uuid)
         return vm
 
     def delete_vm(self, vm):
