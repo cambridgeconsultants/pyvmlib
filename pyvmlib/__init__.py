@@ -4,7 +4,7 @@
 A simple library for controlling VMware vCenter / ESXi servers.
 
 Copyright:
-    (C) COPYRIGHT Cambridge Consultants Ltd 2017
+    (C) COPYRIGHT Cambridge Consultants Ltd 2017-2018
 
 Licence:
     Licensed under the Apache License, Version 2.0 (the "License");
@@ -83,7 +83,7 @@ import ssl
 from pyVim.connect import SmartConnect, Disconnect
 from pyVmomi import vim, vmodl
 import requests
-from six import raise_from
+import six
 
 ##############################################################################
 # Local imports
@@ -199,13 +199,13 @@ class Connection:
                 # Squash the library error - it isn't helpful
                 msg = "Unable to log in as user {user!r} on host " \
                     "{host!r}".format(user=self.username, host=self.host)
-                raise_from(InvalidCredentialsException(msg), None)
+                six.raise_from(InvalidCredentialsException(msg), None)
             except (IOError, ) as e:
                 # The underlying error may be useful, but give them
                 # one of our errors first.
                 msg = "Cannot connect to {host!r} ({exc})".format(
                     host=self.host, exc=e)
-                raise_from(HostConnectException(msg), e)
+                six.raise_from(HostConnectException(msg), e)
             self.content = self.si.RetrieveContent()
             self.log.debug("...Connected")
 
@@ -328,7 +328,7 @@ class Connection:
         Arguments:
         :param vm: VM to get addresses for (see `get_vm`)
         """
-        if isinstance(vm, str) or isinstance(vm, unicode):
+        if isinstance(vm, six.string_types):
             vm = self.get_vm(vm)
         addresses = []
         for nic in vm.guest.net:
@@ -352,7 +352,7 @@ class Connection:
             much faster.
         """
         if folder:
-            if isinstance(folder, str) or isinstance(folder, unicode):
+            if isinstance(folder, six.string_types):
                 folder = self.get_folder(folder)
             # Search this specific folder (without recursing deeper)
             vm = self.si.content.searchIndex.FindChild(folder, vm_name)
@@ -664,7 +664,7 @@ class Connection:
         :param vm: the vm to remove USB device from (see `get_vm`, or pass VM
             name)
         """
-        if isinstance(vm, str) or isinstance(vm, unicode):
+        if isinstance(vm, six.string_types):
             vm = self.get_vm(vm)
         return filter(
             lambda x: isinstance(
@@ -682,7 +682,7 @@ class Connection:
             name)
         :param descriptor: USB device descriptor string
         """
-        if isinstance(vm, str) or isinstance(vm, unicode):
+        if isinstance(vm, six.string_types):
             vm = self.get_vm(vm)
 
         key = None
@@ -721,7 +721,7 @@ class Connection:
             name)
         :param descriptor: USB device descriptor string
         """
-        if isinstance(vm, str) or isinstance(vm, unicode):
+        if isinstance(vm, six.string_types):
             vm = self.get_vm(vm)
         cfg = vim.VirtualDeviceConfigSpec()
         cfg.operation = vim.VirtualDeviceConfigSpecOperation.add
@@ -825,7 +825,7 @@ class Connection:
         :param overwrite: If True, this operation can over-write an existing
             file. If False, it cannot.
         """
-        if isinstance(vm, str) or isinstance(vm, unicode):
+        if isinstance(vm, six.string_types):
             vm = self.get_vm(vm)
         creds = vim.vm.guest.NamePasswordAuthentication(
             username=vm_username, password=vm_password)
@@ -863,7 +863,7 @@ class Connection:
         :param path_in_vm: The path to the file in the VM.
         :param path_local: The path to the file on this machine.
         """
-        if isinstance(vm, str) or isinstance(vm, unicode):
+        if isinstance(vm, six.string_types):
             vm = self.get_vm(vm)
         creds = vim.vm.guest.NamePasswordAuthentication(
             username=vm_username, password=vm_password)
@@ -970,7 +970,7 @@ class Connection:
                remaining = 0
             }
         """
-        if isinstance(vm, str) or isinstance(vm, unicode):
+        if isinstance(vm, six.string_types):
             vm = self.get_vm(vm)
         creds = vim.vm.guest.NamePasswordAuthentication(
             username=vm_username, password=vm_password)
@@ -1001,7 +1001,7 @@ class Connection:
             do not exist will be created. If False, they will not and must
             exist already.
         """
-        if isinstance(vm, str) or isinstance(vm, unicode):
+        if isinstance(vm, six.string_types):
             vm = self.get_vm(vm)
         creds = vim.vm.guest.NamePasswordAuthentication(
             username=vm_username, password=vm_password)
@@ -1043,7 +1043,7 @@ class Connection:
         :param recursive: If True, the content of the directory will also be
             deleted. If False, the directory must be empty.
         """
-        if isinstance(vm, str) or isinstance(vm, unicode):
+        if isinstance(vm, six.string_types):
             vm = self.get_vm(vm)
         creds = vim.vm.guest.NamePasswordAuthentication(
             username=vm_username, password=vm_password)
@@ -1080,7 +1080,7 @@ class Connection:
 
         Returns the PID of the new process.
         """
-        if isinstance(vm, str) or isinstance(vm, unicode):
+        if isinstance(vm, six.string_types):
             vm = self.get_vm(vm)
         creds = vim.vm.guest.NamePasswordAuthentication(
             username=vm_username, password=vm_password)
@@ -1122,7 +1122,7 @@ class Connection:
 
         Returns the a list of GuestProcessInfo objects.
         """
-        if isinstance(vm, str) or isinstance(vm, unicode):
+        if isinstance(vm, six.string_types):
             vm = self.get_vm(vm)
         creds = vim.vm.guest.NamePasswordAuthentication(
             username=vm_username, password=vm_password)
@@ -1143,7 +1143,7 @@ class Connection:
         :param snapshot: The name of the snapshot to revert to as a
             string, or a vim.vm.Snapshot object.
         """
-        if isinstance(snapshot, str) or isinstance(snapshot, unicode):
+        if isinstance(snapshot, six.string_types):
             snapshot = self.find_snapshot(vm, snapshot)
         self.wait_for_tasks([snapshot.RevertToSnapshot_Task()])
 
@@ -1170,7 +1170,7 @@ class Connection:
                         return child
             return None
 
-        if isinstance(vm, str) or isinstance(vm, unicode):
+        if isinstance(vm, six.string_types):
             vm = self.get_vm(vm)
         result = walk_snapshot_list(
             vm.snapshot.rootSnapshotList, snapshot_name)
