@@ -190,7 +190,7 @@ class Connection:
             }
             if self.ignore_ssl_error:
                 # Disabling SSL certificate verification
-                context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
+                context = ssl.SSLContext(ssl.PROTOCOL_TLS)
                 context.verify_mode = ssl.CERT_NONE
                 kwargs['sslContext'] = context
             try:
