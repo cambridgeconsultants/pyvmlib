@@ -11,7 +11,7 @@ def read(fname):
 
 setup(
     name='pyvmlib',
-    version='2.4.2',
+    version='2.4.3',
     description='A simple library for controlling VMware vSphere servers.',
     # NOTE: pypi prefers the use of RST to render docs
     long_description=read('README.rst'),
@@ -30,6 +30,7 @@ setup(
         'Intended Audience :: System Administrators',
         'Intended Audience :: Developers',
         'Environment :: No Input/Output (Daemon)',
+        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
@@ -40,6 +41,6 @@ setup(
         'Topic :: System :: Distributed Computing',
     ],
     keywords=['pyvmlib', 'pyvmomi', 'vsphere', 'vmware', 'esxi'],
-    python_requires='>=3.4',
+    python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*',
     zip_safe=False
 )
