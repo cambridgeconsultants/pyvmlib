@@ -1,10 +1,11 @@
 language: python
 python:
-  - "2.7"
-  - "3.3"
   - "3.4"
   - "3.5"
   - "3.6"
+  - "3.7"
+  - "3.8"
+  - "3.9"
 install:
   - "pip install ."
   - "pip install nose"
@@ -15,18 +16,18 @@ deploy:
     user: "__token__"
     password:
       secure: "Djo5OsdaQpx/dXxN1Mmcdx6AZJfXIB5Ji40PpSdNj8k2bNQM4YKg3/lMk3lfZnZx5ZzZfUvwi6GQ5l18B+d+O+7xmDmaO0d57pQsk1N/QXQejEM6EvRC1sN/BVla/5hQAwkoZo5EfSRY5B9O4VaX/QmBt26+dcEk5P4e8Lc27TZ9xqFPKWwQRzutwv96Goz3LP3vosdgUcGqDrc9+IIiVZV40yWG69VZ+2u9b8aCrL0Husc0ZtidPOIoGwL+zxb1i49xGwxM23DDRBDZWCbRDMecIix77rcf1GjaA4zWRGdzSJA4umew7wwzENvvWUQLmkHImhRmy1l6SsRt6TIsNtAQ+yWpmTbKdaDGJNvw25mNAqs9LhxMtW/jrokpKXH6L1bql1hRKm2It+77gpCMiGxM093GCwVJCCx6vNtFGh0bcBG2Zcf7Phda+eN0G9fKz1C3XguHRNEuPY0zI1pxirDtGyO3R/85QDatY82fPr6xDMYz1NxavDG9RpbgrHf09YIpVh2mFAdMxIUvjWe74f8/TkJ8SVS5Lhsih4C3ohh7wA/+8ifxR1ZCfV6J1AlX5OF6+UTU9Kl5CbZ5+xbz0K/F5jkSqVf7tVuZDvwUBRGkAnWksIij6U0al7FI8WTvfauJeDVwX1Y8ZofGqJh3nA1ENJ6NCAi7i6sV+9k4idI="
-    distributions: sdist
+    distributions: sdist bdist_wheel
     on:
       tags: true
-      condition: $TRAVIS_PYTHON_VERSION = "2.7"
+      condition: $TRAVIS_PYTHON_VERSION = "3.9"
   # test pypi
   - provider: pypi
-    distributions: sdist
-    server: https://test.pypi.org/legacy/
+    distributions: sdist bdist_wheel
+    server: https://test.pypi.org
     user: "__token__"
     password:
       secure: "Djo5OsdaQpx/dXxN1Mmcdx6AZJfXIB5Ji40PpSdNj8k2bNQM4YKg3/lMk3lfZnZx5ZzZfUvwi6GQ5l18B+d+O+7xmDmaO0d57pQsk1N/QXQejEM6EvRC1sN/BVla/5hQAwkoZo5EfSRY5B9O4VaX/QmBt26+dcEk5P4e8Lc27TZ9xqFPKWwQRzutwv96Goz3LP3vosdgUcGqDrc9+IIiVZV40yWG69VZ+2u9b8aCrL0Husc0ZtidPOIoGwL+zxb1i49xGwxM23DDRBDZWCbRDMecIix77rcf1GjaA4zWRGdzSJA4umew7wwzENvvWUQLmkHImhRmy1l6SsRt6TIsNtAQ+yWpmTbKdaDGJNvw25mNAqs9LhxMtW/jrokpKXH6L1bql1hRKm2It+77gpCMiGxM093GCwVJCCx6vNtFGh0bcBG2Zcf7Phda+eN0G9fKz1C3XguHRNEuPY0zI1pxirDtGyO3R/85QDatY82fPr6xDMYz1NxavDG9RpbgrHf09YIpVh2mFAdMxIUvjWe74f8/TkJ8SVS5Lhsih4C3ohh7wA/+8ifxR1ZCfV6J1AlX5OF6+UTU9Kl5CbZ5+xbz0K/F5jkSqVf7tVuZDvwUBRGkAnWksIij6U0al7FI8WTvfauJeDVwX1Y8ZofGqJh3nA1ENJ6NCAi7i6sV+9k4idI="
     on:
       branch: master
       tags: false
-      condition: $TRAVIS_PYTHON_VERSION = "2.7"
+      condition: $TRAVIS_PYTHON_VERSION = "3.9"
