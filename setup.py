@@ -25,9 +25,7 @@ setup(
         'six',
     ],
     packages=['pyvmlib'],
-    license='License :: OSI Approved :: Apache Software License',
     classifiers=[
-        'License :: OSI Approved :: Apache Software License',
         'Intended Audience :: Information Technology',
         'Intended Audience :: System Administrators',
         'Intended Audience :: Developers',
@@ -41,7 +39,7 @@ setup(
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Topic :: System :: Distributed Computing',
     ],
-    keywords='pyvmomi, vsphere, vmware, esx',
+    keywords=['pyvmlib', 'pyvmomi', 'vsphere', 'vmware', 'esxi'],
     python_requires='>=3.4',
     zip_safe=False
 )
