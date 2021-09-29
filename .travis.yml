@@ -17,14 +17,14 @@ jobs:
       python: "3.9"
       deploy:
         # production pypi
-        #- provider: pypi
-        #  user: "__token__"
-        #  password:
-        #    secure: "Djo5OsdaQpx/dXxN1Mmcdx6AZJfXIB5Ji40PpSdNj8k2bNQM4YKg3/lMk3lfZnZx5ZzZfUvwi6GQ5l18B+d+O+7xmDmaO0d57pQsk1N/QXQejEM6EvRC1sN/BVla/5hQAwkoZo5EfSRY5B9O4VaX/QmBt26+dcEk5P4e8Lc27TZ9xqFPKWwQRzutwv96Goz3LP3vosdgUcGqDrc9+IIiVZV40yWG69VZ+2u9b8aCrL0Husc0ZtidPOIoGwL+zxb1i49xGwxM23DDRBDZWCbRDMecIix77rcf1GjaA4zWRGdzSJA4umew7wwzENvvWUQLmkHImhRmy1l6SsRt6TIsNtAQ+yWpmTbKdaDGJNvw25mNAqs9LhxMtW/jrokpKXH6L1bql1hRKm2It+77gpCMiGxM093GCwVJCCx6vNtFGh0bcBG2Zcf7Phda+eN0G9fKz1C3XguHRNEuPY0zI1pxirDtGyO3R/85QDatY82fPr6xDMYz1NxavDG9RpbgrHf09YIpVh2mFAdMxIUvjWe74f8/TkJ8SVS5Lhsih4C3ohh7wA/+8ifxR1ZCfV6J1AlX5OF6+UTU9Kl5CbZ5+xbz0K/F5jkSqVf7tVuZDvwUBRGkAnWksIij6U0al7FI8WTvfauJeDVwX1Y8ZofGqJh3nA1ENJ6NCAi7i6sV+9k4idI="
-        #  distributions: sdist bdist_wheel
-        #  on:
-        #   branch: master
-        #   tags: true
+        - provider: pypi
+          distributions: sdist bdist_wheel
+          user: "__token__"
+          password:
+            secure: "Djo5OsdaQpx/dXxN1Mmcdx6AZJfXIB5Ji40PpSdNj8k2bNQM4YKg3/lMk3lfZnZx5ZzZfUvwi6GQ5l18B+d+O+7xmDmaO0d57pQsk1N/QXQejEM6EvRC1sN/BVla/5hQAwkoZo5EfSRY5B9O4VaX/QmBt26+dcEk5P4e8Lc27TZ9xqFPKWwQRzutwv96Goz3LP3vosdgUcGqDrc9+IIiVZV40yWG69VZ+2u9b8aCrL0Husc0ZtidPOIoGwL+zxb1i49xGwxM23DDRBDZWCbRDMecIix77rcf1GjaA4zWRGdzSJA4umew7wwzENvvWUQLmkHImhRmy1l6SsRt6TIsNtAQ+yWpmTbKdaDGJNvw25mNAqs9LhxMtW/jrokpKXH6L1bql1hRKm2It+77gpCMiGxM093GCwVJCCx6vNtFGh0bcBG2Zcf7Phda+eN0G9fKz1C3XguHRNEuPY0zI1pxirDtGyO3R/85QDatY82fPr6xDMYz1NxavDG9RpbgrHf09YIpVh2mFAdMxIUvjWe74f8/TkJ8SVS5Lhsih4C3ohh7wA/+8ifxR1ZCfV6J1AlX5OF6+UTU9Kl5CbZ5+xbz0K/F5jkSqVf7tVuZDvwUBRGkAnWksIij6U0al7FI8WTvfauJeDVwX1Y8ZofGqJh3nA1ENJ6NCAi7i6sV+9k4idI="
+          on:
+            branch: master
+            tags: true
         # test pypi
         - provider: pypi
           distributions: sdist bdist_wheel
@@ -33,5 +33,5 @@ jobs:
           password:
             secure: "lg8pH6BfqX/dsQynL7SEzW+zV2yABkI1B1PROEkCa+BX3P+BdKAQw1qhGhz35EB0dPgg10nqf9+wYbBPCMoTWig2KttD9FSNODQQua4/J6CtMr/I7KuuRCIb5yD1DUjMM4eYDt6l6dePxaT8JwjGfaYSweGIOhULaDzmNci95+IihA5KysE1b1RWkagrd3c1g3tztPJEmXHltI+mRdu+uaYksji6zl1z0Xpwwai8Qh40RTClQ0F3hnoUnRlzyIf5ezrVvr4t5XSK60ya6BS0+DvsWuo79d3Q/s1ARPf8EIdcYUpeCraeWRbrQtyc/Gra7pSmW16bd+wlmNdvp4V8G4QZL3jS3TXEg/RhHJ/jCbbsBi2bI+FTr9K0YOggWv+QhnSzwn8F9ZvrL+eKoB/226IWUgC2N1SCaaM6FML3MZLiAg0UixQr1EPYX5w7sl36aIAVr+gUdAoES0RTvt4X7+s2nMKFmaMcUv/r+P40qVcmV5YiNBHwYsgPnjyKQlN1rH3lsNEGG/fTqyh4hRFZNzg/UnHxAaOVhezI1/E/tP45Pj4d/w0AGDoFy9E4CjUqNYvuR6QCGMMLIXjSIrF3Fy/ZmHA1qQ1nAh7QteSxBr8vLTz2BauaPZe4h5os0j47AyX1RFAcMGkTN3thGyaSJsxUJgN668VQcHYJPb5hI7w="
           on:
-            branch: python_ci_updates
+            branch: master
             tags: false

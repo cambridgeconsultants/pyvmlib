@@ -11,7 +11,7 @@ def read(fname):
 
 setup(
     name='pyvmlib',
-    version='2.4.6',
+    version='2.4.1',
     description='A simple library for controlling VMware vSphere servers.',
     # NOTE: pypi prefers the use of RST to render docs
     long_description=read('README.rst'),
