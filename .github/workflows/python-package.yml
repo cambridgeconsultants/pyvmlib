@@ -35,7 +35,6 @@ jobs:
     - name: Publish pytest test results
       uses: mikepenz/action-junit-report@v2
       with:
-        report_paths: junit/pytest-results*.xml
-        path: junit/test-results-${{ matrix.python-version }}.xml
+        report_paths: junit/pytest-results*.xm
       # Use always() to always run this step to publish test results when there are test failures
       if: ${{ always() }}
