@@ -5,7 +5,6 @@ name: Build, Test and Release Python Package
 
 on:
   push:
-    branches: [ github_actions_testing ]
   pull_request:
     branches: [ master ]
 
