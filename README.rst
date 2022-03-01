@@ -1,5 +1,5 @@
-.. image:: https://app.travis-ci.com/cambridgeconsultants/pyvmlib.svg?branch=master
-    :target: https://app.travis-ci.com/cambridgeconsultants/pyvmlib
+.. image:: https://github.com/cambridgeconsultants/pyvmlib/actions/workflows/python-package.yml/badge.svg?branch=master
+    :target: https://github.com/cambridgeconsultants/pyvmlib/actions?query=workflow%3A%22Build%2C+Test+and+Release+Python+Package%22++
     :alt: Build Status
 
 .. image:: https://img.shields.io/pypi/dm/pyvmlib.svg
